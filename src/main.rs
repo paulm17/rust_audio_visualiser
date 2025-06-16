@@ -24,7 +24,7 @@ const MIN_DECIBEL: f32 = -90.0;
 const MAX_DECIBEL: f32 = -10.0;
 // const SAMPLE_RATE: usize = 44100;
 const BUFFER_SIZE: usize = 2048;
-const UPDATE_INTERVAL: Duration = Duration::from_millis(16);
+const UPDATE_INTERVAL: Duration = Duration::from_millis(33);
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -226,7 +226,7 @@ impl AudioVisualizer {
       }
       Message::Tick => {
         if self.is_playing {
-          // scope the lock so it’s dropped before we call update_frequency_data
+          // scope the lock so it's dropped before we call update_frequency_data
           let maybe_mags = {
             let mut guard = self.audio_data.lock().unwrap();
             if !guard.is_empty() {
@@ -242,16 +242,27 @@ impl AudioVisualizer {
           }
         } else if self.is_decaying {
           let mut any_above = false;
+          const DECAY_RATE: f32 = 3.0; // Adjust this value to control decay speed
+
           for h in &mut self.frequency_data {
-            let new_h = (*h - 8.0).max(MIN_BAR_HEIGHT);
-            if new_h > MIN_BAR_HEIGHT {
+            let new_h = (*h - DECAY_RATE).max(MIN_BAR_HEIGHT);
+            if new_h > MIN_BAR_HEIGHT + 0.1 {
+              // Add small threshold to avoid floating point issues
               any_above = true;
             }
             *h = new_h;
           }
+
           if !any_above {
             self.is_decaying = false;
+            // Ensure all bars are at minimum height
+            for h in &mut self.frequency_data {
+              *h = MIN_BAR_HEIGHT;
+            }
           }
+
+          // Clear canvas cache to trigger redraw
+          self.canvas_cache.clear();
         }
 
         Command::none()
