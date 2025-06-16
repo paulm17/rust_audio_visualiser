@@ -148,7 +148,7 @@ impl AudioVisualizer {
       *old = *old * SMOOTHING + *new * (1.0 - SMOOTHING);
     }
 
-    self.canvas_cache.clear();
+    // self.canvas_cache.clear();
   }
 
   fn group_frequencies_into_bars(&self, magnitudes: Vec<f32>) -> Vec<f32> {
@@ -221,7 +221,7 @@ impl AudioVisualizer {
       }
       Message::AudioData(data) => {
         self.update_frequency_data(data);
-        self.canvas_cache.clear();
+        // self.canvas_cache.clear();
         Command::none()
       }
       Message::Tick => {
@@ -262,7 +262,7 @@ impl AudioVisualizer {
           }
 
           // Clear canvas cache to trigger redraw
-          self.canvas_cache.clear();
+          // self.canvas_cache.clear();
         }
 
         Command::none()
