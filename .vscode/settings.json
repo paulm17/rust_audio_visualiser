@@ -1,0 +1,26 @@
+{
+  // Rust formatting settings
+  "[rust]": {
+    "editor.defaultFormatter": "rust-lang.rust-analyzer",
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": true,
+    "editor.formatOnType": false
+  },
+  
+  // Rustfmt configuration
+  "rust-analyzer.rustfmt.extraArgs": [
+    "--config", "max_width=100",
+    "--config", "tab_spaces=2",
+    "--config", "use_small_heuristics=Max",
+    "--config", "newline_style=Unix"
+  ],
+  
+  // General editor settings for this project
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": false,
+  "files.eol": "\n",
+  
+  // Disable other formatters for Rust files
+  "prettier.disableLanguages": ["rust"]
+}

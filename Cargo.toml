@@ -1,0 +1,15 @@
+[package]
+name = "rust_audio_visualiser"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+iced = { version = "0.13.0", features = ["canvas", "tokio", "advanced"] }
+rodio = { version = "0.20.1", features = ["mp3", "wav", "flac", "vorbis"] }
+rustfft = "6.2"
+rfd = "0.15.3"
+fastrand = "2.0"
+
+[dependencies.tokio]
+version = "1.0"
+features = ["full"]
