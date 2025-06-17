@@ -19,7 +19,7 @@ use crate::components::{tap::Tap, visualiser::VisualizerCanvas};
 const DEFAULT_NUM_BARS: usize = 75;
 const DEFAULT_BAR_WIDTH: f32 = 8.0;
 const DEFAULT_STARTING_ANGLE: f32 = 0.0;
-const MIN_BAR_HEIGHT: f32 = 4.0;
+const MIN_BAR_HEIGHT: f32 = 10.0;
 const MIN_DECIBEL: f32 = -90.0;
 const MAX_DECIBEL: f32 = -10.0;
 // const SAMPLE_RATE: usize = 44100;
@@ -114,24 +114,36 @@ impl AudioVisualizer {
       let fft = planner.plan_fft_forward(BUFFER_SIZE);
 
       thread::spawn(move || {
+        let mut sample_buffer = Vec::with_capacity(BUFFER_SIZE * 2); // NEW: Persistent buffer
+        const HOP_SIZE: usize = BUFFER_SIZE / 4; // NEW: Hop size for overlapping
+
         while let Ok(samples) = receiver.recv() {
-          if samples.len() >= BUFFER_SIZE {
-            // Build the complex buffer once per chunk
+          sample_buffer.extend_from_slice(&samples); // NEW: Accumulate samples instead of processing immediately
+
+          // NEW: Process overlapping chunks
+          while sample_buffer.len() >= BUFFER_SIZE {
+            // Take exactly BUFFER_SIZE samples for this chunk
+            let chunk: Vec<f32> = sample_buffer.iter().take(BUFFER_SIZE).cloned().collect();
+
+            // Build the complex buffer (this is the same as Version 1 for now)
             let mut buffer: Vec<Complex<f32>> =
-              samples[..BUFFER_SIZE].iter().map(|&x| Complex::new(x, 0.0)).collect();
+              chunk.iter().map(|&x| Complex::new(x, 0.0)).collect();
 
             // Run the FFT
             fft.process(&mut buffer);
 
-            // Convert to frequency magnitudes
+            // Convert to frequency magnitudes (same as Version 1)
             let magnitudes: Vec<f32> =
               buffer.iter().take(BUFFER_SIZE / 2).map(|c| c.norm()).collect();
 
-            // Push into our shared audio_data for the UI thread
+            // Push into our shared audio_data for the UI thread (same as Version 1)
             if let Ok(mut data_buffer) = audio_data.lock() {
               data_buffer.clear();
               data_buffer.extend(magnitudes);
             }
+
+            // NEW: Remove only HOP_SIZE samples, keeping the rest for overlap
+            sample_buffer.drain(..HOP_SIZE);
           }
         }
       });
@@ -244,27 +256,22 @@ impl AudioVisualizer {
             self.update_frequency_data(mags);
           }
         } else if self.is_decaying {
-          let mut any_above = false;
-          const DECAY_RATE: f32 = 3.0; // Adjust this value to control decay speed
+          const DECAY_FACTOR: f32 = 0.95; // <-- CHANGED: Exponential multiplication
+          let mut any_above_min = false;
 
-          for h in &mut self.frequency_data {
-            let new_h = (*h - DECAY_RATE).max(MIN_BAR_HEIGHT);
-            if new_h > MIN_BAR_HEIGHT + 0.1 {
-              // Add small threshold to avoid floating point issues
-              any_above = true;
+          for height in &mut self.frequency_data {
+            *height *= DECAY_FACTOR; // <-- CHANGED: Multiply instead of subtract
+            if *height > MIN_BAR_HEIGHT + 0.1 {
+              any_above_min = true;
+            } else {
+              *height = MIN_BAR_HEIGHT;
             }
-            *h = new_h;
           }
 
-          if !any_above {
+          if !any_above_min {
             self.is_decaying = false;
-            // Ensure all bars are at minimum height
-            for h in &mut self.frequency_data {
-              *h = MIN_BAR_HEIGHT;
-            }
           }
 
-          // Clear canvas cache to trigger redraw
           self.canvas_cache.clear();
         }
 
