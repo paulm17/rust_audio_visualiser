@@ -24,7 +24,7 @@ const MIN_DECIBEL: f32 = -90.0;
 const MAX_DECIBEL: f32 = -10.0;
 // const SAMPLE_RATE: usize = 44100;
 const BUFFER_SIZE: usize = 2048;
-const UPDATE_INTERVAL: Duration = Duration::from_millis(33);
+const UPDATE_INTERVAL: Duration = Duration::from_millis(16);
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -41,6 +41,7 @@ pub struct AudioVisualizer {
   is_loaded: bool,
   is_decaying: bool,
   audio_data: Arc<Mutex<VecDeque<f32>>>,
+  tick: u64,
   frequency_data: Vec<f32>,
   sink: Option<Sink>,
   _stream: Option<OutputStream>,
@@ -225,6 +226,8 @@ impl AudioVisualizer {
         Command::none()
       }
       Message::Tick => {
+        self.tick += 1;
+
         if self.is_playing {
           // scope the lock so it's dropped before we call update_frequency_data
           let maybe_mags = {
@@ -367,6 +370,7 @@ impl Default for AudioVisualizer {
       is_decaying: false,
       audio_data: Arc::new(Mutex::new(VecDeque::new())),
       frequency_data: vec![MIN_BAR_HEIGHT; DEFAULT_NUM_BARS],
+      tick: 0,
       sink: None,
       _stream: None,
       file_path: None,
